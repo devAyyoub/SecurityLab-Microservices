@@ -1,0 +1,83 @@
+services:
+  eureka-server:
+    build:
+      context: /Users/ayyoub/Documents/workspaces/week6/EurekaServer
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      - JAVA_OPTS=-Xms128m -Xmx512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      start_period: 40s
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  student-ms:
+    build:
+      context: /Users/ayyoub/Documents/workspaces/week6/StudentMS
+    container_name: student-ms
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/studentdb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    ports:
+      - "8084:8084"
+
+  reservation-ms:
+    build:
+      context: /Users/ayyoub/Documents/workspaces/week6/ReservationMS
+    container_name: reservation-ms
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/reservationdb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    ports:
+      - "8086:8086"
+
+  university-housing-ms:
+    build:
+      context: /Users/ayyoub/Documents/workspaces/week6/UniversityHousingMS
+    container_name: university-housing-ms
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/universityhousingms?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    ports:
+      - "8087:8087"
+
+  gateway:
+    build:
+      context: /Users/ayyoub/Documents/workspaces/week6/gateway
+    container_name: gateway
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      student-ms:
+        condition: service_started
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      # If you need to override the server port inside the container you can set:
+      - SERVER_PORT=8089
+    ports:
+      - "8089:8089"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8089/actuator/health || exit 1"]
+      start_period: 30s
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
