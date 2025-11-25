@@ -1,9 +1,6 @@
 package com.skistation.universityhousingms.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
@@ -18,4 +15,9 @@ public class University {
     private Long idUniversity;
     private String name;
     private String address;
+
+    @OneToOne(mappedBy = "university", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private StudentHousing studentHousing;
 }

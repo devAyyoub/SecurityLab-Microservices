@@ -70,7 +70,6 @@ services:
         condition: service_started
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      # If you need to override the server port inside the container you can set:
       - SERVER_PORT=8089
     ports:
       - "8089:8089"

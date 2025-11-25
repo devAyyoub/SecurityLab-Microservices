@@ -1,8 +1,5 @@
 package com.skistation.reservationms.entities;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
@@ -16,4 +13,6 @@ public class Reservation {
     private Long idReservation;
     private String yearUniv;
     private boolean isValid;
+
+    private Long studentId;
 }

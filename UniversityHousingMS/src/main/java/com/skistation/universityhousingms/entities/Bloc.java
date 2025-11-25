@@ -1,10 +1,10 @@
 package com.skistation.universityhousingms.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -18,4 +18,15 @@ public class Bloc {
     private Long idBloc;
     private String name;
     private long capacityBloc;
+
+    @ManyToOne
+    @JoinColumn(name = "room_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Room room;
+
+    @OneToMany(mappedBy = "bloc", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<StudentHousing> studentHousings = new ArrayList<>();
 }
