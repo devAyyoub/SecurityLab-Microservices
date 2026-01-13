@@ -71,5 +71,13 @@ public class StudentController {
         studentRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
+
+
+//    @GetMapping("/retrieve-all-Student")
+//    //  @PreAuthorize("hasRole('USER')")
+//    public List<Student> getStudents() {
+//        List<Student> listStudents = (List<Student>) studentRepository.findAll();
+//        return listStudents;
+//    }
 }
 
