@@ -42,7 +42,7 @@ public class StudentController {
 
     // Read by id
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_STUDENT.READ')")
+    // @PreAuthorize("hasAuthority('ROLE_STUDENT.READ')")
     public ResponseEntity<Student> getStudentById(@PathVariable Long id) {
         Optional<Student> s = studentRepository.findById(id);
         return s.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());

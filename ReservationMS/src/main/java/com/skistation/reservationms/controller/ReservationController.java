@@ -8,6 +8,7 @@ import com.skistation.reservationms.services.ReservationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -36,6 +37,7 @@ public class ReservationController {
 
     // Create reservation with student validation
     @PostMapping(params = "studentId")
+    @PreAuthorize("hasAuthority('ROLE_STUDENT.READ')")
     public ResponseEntity<Reservation> createReservation(@RequestParam("studentId") Long studentId) {
         try {
             StudentDTO student = studentClient.getStudentById(studentId);

@@ -70,10 +70,14 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
             return Set.of();
         }
 
-        // Convert Keycloak roles like "role_user" -> Spring Security ROLE_USER
+        // Convert Keycloak roles like "student.read" -> Spring Security ROLE_STUDENT.READ
+        // or "role_user" -> Spring Security ROLE_USER
         return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(
-                        "ROLE_" + role.replace("role_", "").toUpperCase()))
+                .map(role -> {
+                    // Keep dots in role names (e.g., student.read -> ROLE_STUDENT.READ)
+                    String authority = "ROLE_" + role.replace("role_", "").toUpperCase();
+                    return new SimpleGrantedAuthority(authority);
+                })
                 .collect(Collectors.toSet());
     }
 }

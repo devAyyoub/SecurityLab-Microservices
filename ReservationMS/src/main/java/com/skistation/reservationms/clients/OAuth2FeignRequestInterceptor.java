@@ -30,7 +30,7 @@ public class OAuth2FeignRequestInterceptor implements RequestInterceptor {
                     AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS")
             );
             
-            logger.debug("Intentando obtener token OAuth2 para client registration: ms-reservation");
+            logger.debug("Attempting to obtain OAuth2 token for client registration: ms-reservation");
             var client = manager.authorize(
                     OAuth2AuthorizeRequest.withClientRegistrationId("ms-reservation")
                             .principal(anonymousToken)
@@ -39,15 +39,15 @@ public class OAuth2FeignRequestInterceptor implements RequestInterceptor {
             
             if (client != null && client.getAccessToken() != null) {
                 String tokenValue = client.getAccessToken().getTokenValue();
-                logger.info("Token OAuth2 obtenido exitosamente. Primeros caracteres: {}", 
+                logger.info("OAuth2 token obtained successfully. First characters: {}", 
                         tokenValue.substring(0, Math.min(20, tokenValue.length())) + "..."); 
                 template.header("Authorization", "Bearer " + tokenValue);
-                logger.debug("Header Authorization añadido a la petición Feign");
+                logger.debug("Authorization header added to Feign request");
             } else {
-                logger.error("No se pudo obtener el token OAuth2. Client es null o no tiene access token");
+                logger.error("Failed to obtain OAuth2 token. Client is null or has no access token");
             }
         } catch (Exception e) {
-            logger.error("Error al obtener token OAuth2 para Feign: {}", e.getMessage(), e);
+            logger.error("Error obtaining OAuth2 token for Feign: {}", e.getMessage(), e);
         }
     }
 }
