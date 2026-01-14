@@ -5,6 +5,7 @@ import com.skistation.studentms.repository.IStudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ public class StudentController {
 
     // Read all
     @GetMapping
+    @PreAuthorize("hasRole('USER')")
     public List<Student> getAllStudents() {
         List<Student> list = new ArrayList<>();
         studentRepository.findAll().forEach(list::add);
@@ -40,6 +42,7 @@ public class StudentController {
 
     // Read by id
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_STUDENT.READ')")
     public ResponseEntity<Student> getStudentById(@PathVariable Long id) {
         Optional<Student> s = studentRepository.findById(id);
         return s.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
@@ -71,13 +74,5 @@ public class StudentController {
         studentRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
-
-
-//    @GetMapping("/retrieve-all-Student")
-//    //  @PreAuthorize("hasRole('USER')")
-//    public List<Student> getStudents() {
-//        List<Student> listStudents = (List<Student>) studentRepository.findAll();
-//        return listStudents;
-//    }
 }
 

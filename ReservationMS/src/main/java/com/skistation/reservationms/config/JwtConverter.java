@@ -1,4 +1,4 @@
-package com.skistation.studentms.config;
+package com.skistation.reservationms.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.converter.Converter;
@@ -16,11 +16,14 @@ import java.util.stream.Stream;
 @Component
 public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
-    @Value("${jwt.auth.converter.principal-attribute}")
+    @Value("${jwt.auth.converter.principal-attribute:preferred_username}")
     private String principalAttribute;
 
-    @Value("${jwt.auth.converter.resource-id}")
+    @Value("${jwt.auth.converter.resource-id:reservationms}")
     private String resourceId;
+
+    @Value("${jwt.auth.converter.downstream-resources:studentms}")
+    private String downstreamResources;
 
     @Override
     @SuppressWarnings("unchecked")
@@ -30,14 +33,21 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
                 .map(map -> (Collection<String>) map.get("roles"))
                 .orElse(Collections.emptyList())
                 .stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase().replace("-", "_")));
 
-        // Extract client (resource) roles
-        Stream<GrantedAuthority> clientRoles = extractResourceRoles(jwt).stream();
+        // Extract roles from own resource (reservationms)
+        Stream<GrantedAuthority> ownResourceRoles = extractResourceRoles(jwt, resourceId).stream();
 
-        // Combine realm + client roles
-        Collection<GrantedAuthority> authorities = Stream.concat(realmRoles, clientRoles)
-                .collect(Collectors.toSet());
+        // Extract roles from downstream resources (e.g., studentms)
+        Stream<GrantedAuthority> downstreamRoles = Arrays.stream(downstreamResources.split(","))
+                .map(String::trim)
+                .flatMap(resource -> extractResourceRoles(jwt, resource).stream());
+
+        // Combine all roles
+        Collection<GrantedAuthority> authorities = Stream.concat(
+                Stream.concat(realmRoles, ownResourceRoles),
+                downstreamRoles
+        ).collect(Collectors.toSet());
 
         return new JwtAuthenticationToken(jwt, authorities, getPrincipalName(jwt));
     }
@@ -53,10 +63,10 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
     }
 
     /**
-     * Extract roles assigned to the client/resource.
+     * Extract roles assigned to a specific client/resource.
      */
     @SuppressWarnings("unchecked")
-    private Collection<GrantedAuthority> extractResourceRoles(Jwt jwt) {
+    private Collection<GrantedAuthority> extractResourceRoles(Jwt jwt, String resourceId) {
         Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
 
         if (resourceAccess == null || resourceAccess.get(resourceId) == null) {
@@ -70,10 +80,10 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
             return Set.of();
         }
 
-        // Convert Keycloak roles like "role_user" -> Spring Security ROLE_USER
+        // Convert Keycloak roles like "student.read" -> Spring Security ROLE_STUDENT_READ
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority(
-                        "ROLE_" + role.replace("role_", "").toUpperCase()))
+                        "ROLE_" + role.replace("role_", "").replace(".", "_").toUpperCase()))
                 .collect(Collectors.toSet());
     }
 }

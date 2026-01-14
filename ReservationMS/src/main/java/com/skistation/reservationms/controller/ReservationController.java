@@ -4,10 +4,12 @@ import com.skistation.reservationms.entities.Reservation;
 import com.skistation.reservationms.repository.IReservationRepository;
 import com.skistation.reservationms.clients.StudentClient;
 import com.skistation.reservationms.dto.StudentDTO;
+import com.skistation.reservationms.services.ReservationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,10 @@ import java.util.Optional;
 @RestController
 @RequestMapping(path = "/reservations")
 public class ReservationController {
+
+
+    @Autowired
+    ReservationService reservationService;
 
     @Autowired
     private IReservationRepository reservationRepository;
@@ -28,11 +34,31 @@ public class ReservationController {
         return "test";
     }
 
-    // Create
-    @PostMapping
-    public ResponseEntity<Reservation> createReservation(@RequestBody Reservation reservation) {
-        Reservation saved = reservationRepository.save(reservation);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+    // Create reservation with student validation
+    @PostMapping(params = "studentId")
+    public ResponseEntity<Reservation> createReservation(@RequestParam("studentId") Long studentId) {
+        try {
+            StudentDTO student = studentClient.getStudentById(studentId);
+            if (student == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found with ID " + studentId);
+            }
+            Reservation reservation = reservationService.addReservation(student);
+            return new ResponseEntity<>(reservation, HttpStatus.CREATED);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found with ID " + studentId, e);
+            } else if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied when calling Student service. Check OAuth2 token and roles.", e);
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Error from Student service: " + e.getMessage(), e);
+            }
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Cannot connect to Student service. Is it running? Error: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Error communicating with Student service: " + e.getClass().getSimpleName() + " - " + e.getMessage(), e);
+        }
     }
 
     // Read all

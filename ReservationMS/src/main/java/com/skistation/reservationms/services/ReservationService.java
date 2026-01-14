@@ -1,20 +1,25 @@
 package com.skistation.reservationms.services;
 
-import com.skistation.reservationms.clients.Student;
+import com.skistation.reservationms.dto.StudentDTO;
 import com.skistation.reservationms.entities.Reservation;
 import com.skistation.reservationms.repository.IReservationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-public class IReservationService  {
+@Service
+public class ReservationService {
 
-    IReservationRepository reservationRepository ;
-    public Reservation addReservation(Student student) {
+    @Autowired
+    private IReservationRepository reservationRepository;
+
+    public Reservation addReservation(StudentDTO student) {
         Reservation res = new Reservation();
         if (student == null) {
             throw new IllegalArgumentException("Student does not exist.");
         }
-        res.setStudentId(student.getIdStudent());
-//        res.setStartDate(LocalDate.now());
-//        res.setEndDate(LocalDate.now().plusYears(1));
+        res.setStudentId(student.getId());
         res.setValid(true);
-        return  reservationRepository.save(res);  }
+        res.setYearUniv("2024-2025"); // Set a default year
+        return reservationRepository.save(res);
+    }
 }
