@@ -1,5 +1,7 @@
 package com.skistation.reservationms.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -16,6 +18,8 @@ import java.util.stream.Stream;
 @Component
 public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtConverter.class);
+
     @Value("${jwt.auth.converter.principal-attribute:preferred_username}")
     private String principalAttribute;
 
@@ -28,26 +32,40 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
     @Override
     @SuppressWarnings("unchecked")
     public AbstractAuthenticationToken convert(Jwt jwt) {
+        logger.debug("Converting JWT. Subject: {}, Issuer: {}", jwt.getSubject(), jwt.getIssuer());
+        logger.debug("Resource ID: {}, Downstream Resources: {}", resourceId, downstreamResources);
+        
         // Extract realm roles
         Stream<GrantedAuthority> realmRoles = Optional.ofNullable(jwt.getClaimAsMap("realm_access"))
                 .map(map -> (Collection<String>) map.get("roles"))
                 .orElse(Collections.emptyList())
                 .stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase().replace("-", "_")));
+                .map(role -> {
+                    String authority = "ROLE_" + role.toUpperCase().replace("-", "_");
+                    logger.debug("Extracted realm role: {} -> {}", role, authority);
+                    return new SimpleGrantedAuthority(authority);
+                });
 
         // Extract roles from own resource (reservationms)
-        Stream<GrantedAuthority> ownResourceRoles = extractResourceRoles(jwt, resourceId).stream();
+        Collection<GrantedAuthority> ownResourceRolesCollection = extractResourceRoles(jwt, resourceId);
+        Stream<GrantedAuthority> ownResourceRoles = ownResourceRolesCollection.stream();
 
         // Extract roles from downstream resources (e.g., studentms)
-        Stream<GrantedAuthority> downstreamRoles = Arrays.stream(downstreamResources.split(","))
+        Collection<GrantedAuthority> downstreamRolesCollection = Arrays.stream(downstreamResources.split(","))
                 .map(String::trim)
-                .flatMap(resource -> extractResourceRoles(jwt, resource).stream());
+                .flatMap(resource -> extractResourceRoles(jwt, resource).stream())
+                .collect(Collectors.toList());
+        Stream<GrantedAuthority> downstreamRoles = downstreamRolesCollection.stream();
 
         // Combine all roles
         Collection<GrantedAuthority> authorities = Stream.concat(
                 Stream.concat(realmRoles, ownResourceRoles),
                 downstreamRoles
         ).collect(Collectors.toSet());
+
+        logger.info("JWT converted successfully. Principal: {}, Authorities: {}", 
+                getPrincipalName(jwt), 
+                authorities.stream().map(GrantedAuthority::getAuthority).collect(Collectors.joining(", ")));
 
         return new JwtAuthenticationToken(jwt, authorities, getPrincipalName(jwt));
     }
@@ -68,8 +86,18 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
     @SuppressWarnings("unchecked")
     private Collection<GrantedAuthority> extractResourceRoles(Jwt jwt, String resourceId) {
         Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
+        
+        logger.debug("Resource access claim: {}", resourceAccess);
+        logger.debug("Looking for resource: {}", resourceId);
 
-        if (resourceAccess == null || resourceAccess.get(resourceId) == null) {
+        if (resourceAccess == null) {
+            logger.warn("resource_access claim is null");
+            return Set.of();
+        }
+        
+        if (resourceAccess.get(resourceId) == null) {
+            logger.warn("Resource '{}' not found in resource_access. Available resources: {}", 
+                    resourceId, resourceAccess.keySet());
             return Set.of();
         }
 
@@ -77,14 +105,20 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
         Collection<String> roles = (Collection<String>) resource.get("roles");
 
         if (roles == null) {
+            logger.warn("No roles found for resource '{}'", resourceId);
             return Set.of();
         }
+
+        logger.debug("Found {} roles for resource '{}': {}", roles.size(), resourceId, roles);
 
         // Convert Keycloak roles like "student.read" -> Spring Security ROLE_STUDENT.READ
         // Keep dots in role names to match StudentMS format
         return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(
-                        "ROLE_" + role.replace("role_", "").toUpperCase()))
+                .map(role -> {
+                    String authority = "ROLE_" + role.replace("role_", "").toUpperCase();
+                    logger.debug("Converted role: {} -> {}", role, authority);
+                    return new SimpleGrantedAuthority(authority);
+                })
                 .collect(Collectors.toSet());
     }
 }

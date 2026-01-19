@@ -23,7 +23,6 @@ public class OAuth2FeignRequestInterceptor implements RequestInterceptor {
     @Override
     public void apply(RequestTemplate template) {
         try {
-            // Create an anonymous authentication for client credentials flow
             AnonymousAuthenticationToken anonymousToken = new AnonymousAuthenticationToken(
                     "key", 
                     ANONYMOUS_PRINCIPAL, 

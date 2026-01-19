@@ -22,7 +22,6 @@ public class FeignClientConfigStudent {
         OAuth2AuthorizedClientService clientService =
                 new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
 
-        // Use AuthenticatedPrincipalOAuth2AuthorizedClientRepository which works with any principal
         OAuth2AuthorizedClientRepository repo =
                 new AuthenticatedPrincipalOAuth2AuthorizedClientRepository(clientService);
 
@@ -31,7 +30,7 @@ public class FeignClientConfigStudent {
 
         manager.setAuthorizedClientProvider(
                 OAuth2AuthorizedClientProviderBuilder.builder()
-                        .clientCredentials()   // Important for service-to-service communication
+                        .clientCredentials()
                         .build()
         );
 
