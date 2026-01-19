@@ -4,7 +4,7 @@
 *.iml
 *.ipr
 
-# Postman collections (pueden contener secrets)
+# Postman collections
 postman-collection.json
 
 # Maven
