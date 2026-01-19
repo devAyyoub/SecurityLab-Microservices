@@ -1,4 +1,27 @@
 services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak-dev
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      # Persistencia: usar base de datos H2 en archivo en lugar de memoria
+      - KC_DB=dev-file
+      - KC_DB_URL_HOST=.
+      - KC_DB_URL_DATABASE=keycloak
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persistir la configuración de Keycloak
+      - keycloak-data:/opt/keycloak/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      start_period: 60s
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   eureka-server:
     build:
       context: /Users/ayyoub/Documents/workspaces/week6/EurekaServer
@@ -21,11 +44,15 @@ services:
     depends_on:
       eureka-server:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/studentdb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/securityms
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/securityms/protocol/openid-connect/certs
     ports:
       - "8084:8084"
 
@@ -36,11 +63,16 @@ services:
     depends_on:
       eureka-server:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/reservationdb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/securityms
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/securityms/protocol/openid-connect/certs
+      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI=http://keycloak:8080/realms/securityms/protocol/openid-connect/token
     ports:
       - "8086:8086"
 
@@ -50,6 +82,8 @@ services:
     container_name: university-housing-ms
     depends_on:
       eureka-server:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/universityhousingms?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
@@ -66,11 +100,15 @@ services:
     depends_on:
       eureka-server:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
       student-ms:
         condition: service_started
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SERVER_PORT=8089
+      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=http://keycloak:8080/realms/securityms
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/securityms
     ports:
       - "8089:8089"
     healthcheck:
@@ -80,3 +118,6 @@ services:
       timeout: 5s
       retries: 3
 
+volumes:
+  keycloak-data:
+    driver: local
