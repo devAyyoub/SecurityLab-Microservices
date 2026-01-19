@@ -1,0 +1,21 @@
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Postman collections (pueden contener secrets)
+postman-collection.json
+
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
